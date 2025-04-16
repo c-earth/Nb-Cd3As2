@@ -19,78 +19,57 @@ B_res = 1000
 
 Bs = np.linspace(B_min, B_max, B_res)
 
+data = dict()
 for data_name in data_names:
     data_dir = os.path.join(base_dir, data_name)
     dimension = pd.read_csv(os.path.join(data_dir, 'dimension.csv'))
 
-    Ts = []
-    Rho_hall = []
-    Rho_para = []
-    Rho_perp = []
+    Rho_data = dict()
     
-    for file_name in os.listdir(data_dir):
-        data = pd.read_csv(os.path.join(data_dir, file_name))
-        data.rename(columns = {'Temperature (K)': 'Temperature', 
-                            'Field (Oe)': 'Field', 
-                            f'Resistance Ch{ch} (Ohms)': 'rho_xx'},
-                    inplace = True)
+    for exp in ['Hall', 'Para', 'Perp']:
+        exp_dir = os.path.join(data_dir, exp)
+        Rho_data[exp] = {'Ts': [], 'Rhos': []}
+
+        for file_name in os.listdir(exp_dir):
+            exp_data = pd.read_csv(os.path.join(exp_dir, file_name))
+            exp_data.rename(columns = {'Temperature (K)': 'T', 
+                                   'Field (Oe)': 'B', 
+                                   f'Resistance Ch{ch} (Ohms)': 'R'},
+                        inplace = True)
         
-        data['Temperature'] = np.round(data['Temperature'], 0)  # round temperature to integer
-        data['Field'] = data['Field']/10000                     # convert field unit from Gauss to Tesla
-        data['rho_xx'] = data['rho_xx'] * W * T / (L * 1000)    # calculate sample resistivity
-
-        rho_xx_0 = np.min(data['rho_xx'])
-        rho_xx_pos = data.loc[(data['Field'] > 0)].sort_values(by = 'Field', ascending = True)
-        rho_xx_neg = data.loc[(data['Field'] < 0)].sort_values(by = 'Field', ascending = False)
-        
-        # interpolate data between corresponding positive and negative fields
-        pos_interp = PchipInterpolator(*resolve_monotone(np.concatenate([[H_min], rho_xx_pos['Field']]), np.concatenate([[rho_xx_0], rho_xx_pos['rho_xx']])), extrapolate = False)
-        rho_xx_pos_new = pos_interp(Hs)
-        neg_interp = PchipInterpolator(*resolve_monotone(np.concatenate([[H_min], np.abs(rho_xx_neg['Field'])]), np.concatenate([[rho_xx_0], rho_xx_neg['rho_xx']])), extrapolate = False)
-        rho_xx_neg_new = neg_interp(Hs)
-        
-        # get unbiased resistivity
-        rho_xx = (rho_xx_pos_new + rho_xx_neg_new)/2
-
-        Ts.append(data['Temperature'][0])
-        rho_xxs.append(rho_xx)
-
-    Ts = np.array(Ts)
-    rho_xxs = np.stack(rho_xxs)
-
-
-    # sort data by temperature
-    idxs = np.argsort(Ts)
-    Ts = Ts[idxs]
-    rho_xxs = rho_xxs[idxs]
-
-
-    # truncate all H of data at all temperatures to  be the same
-    idx_min = 0
-    idx_max = H_res - 1
-    for rho_xx in rho_xxs:
-        got_min = False
-        got_max = False
-
-        nans = np.isnan(rho_xx)
-
-        for i, nan in enumerate(nans):
-            if not got_min:
-                if not nan:
-                    idx_min = max(idx_min, i)
-                    got_min = True
+            exp_data['T'] = np.round(exp_data['T'], 0)
+            exp_data['B'] = exp_data['B']/10000
+            if exp != 'Hall':
+                exp_data['Rho'] = exp_data['R'] * dimension['T'][0] * dimension['W'][0] / dimension['L'][0]
             else:
-                if not got_max:
-                    if nan:
-                        idx_max = min(idx_max, i - 1)
-                        got_max = True
-                    elif i == len(nans) - 1:
-                        idx_max = min(idx_max, i)
+                exp_data['Rho'] = exp_data['R'] * dimension['T'][0]
 
-    Hs = Hs[idx_min: idx_max + 1]
-    rho_xxs = rho_xxs[:, idx_min: idx_max + 1]
+            Rho_0 = np.mean(exp_data['Rho'][np.argsort(np.abs(exp_data['B']))][:10])
 
+            Rho_pos = exp_data.loc[(exp_data['B'] > 0)].sort_values(by = 'B', ascending = True)
+            Rho_pos = Rho_pos[pd.to_numeric(Rho_pos['Rho'], errors = 'coerce').notnull()]
+            Rho_neg = exp_data.loc[(exp_data['B'] < 0)].sort_values(by = 'B', ascending = False)
+            Rho_neg = Rho_neg[pd.to_numeric(Rho_neg['Rho'], errors = 'coerce').notnull()]
 
-    # save data
-    with open(resu_name, 'wb') as f:
-        pkl.dump([Ts, Hs, rho_xxs], f)
+            pos_interp = PchipInterpolator(*resolve_monotone(np.concatenate([[B_min], Rho_pos['B']]), np.concatenate([[Rho_0], Rho_pos['Rho']])), extrapolate = False)
+            Rho_pos_new = pos_interp(Bs)
+            neg_interp = PchipInterpolator(*resolve_monotone(np.concatenate([[B_min], np.abs(Rho_neg['B'])]), np.concatenate([[Rho_0], Rho_neg['Rho']])), extrapolate = False)
+            Rho_neg_new = neg_interp(Bs)
+
+            Rho_data[exp]['Ts'].append(exp_data['T'][0])
+            if exp != 'Hall':
+                Rho_data[exp]['Rhos'].append((Rho_pos_new + Rho_neg_new) / 2)
+            else:
+                Rho_data[exp]['Rhos'].append((Rho_pos_new - Rho_neg_new) / 2)
+
+        Rho_data[exp]['Ts'] = np.array(Rho_data[exp]['Ts'])
+        Rho_data[exp]['Rhos'] = np.stack(Rho_data[exp]['Rhos'])
+
+        idxs = np.argsort(Rho_data[exp]['Ts'])
+        Rho_data[exp]['Ts'] = Rho_data[exp]['Ts'][idxs]
+        Rho_data[exp]['Rhos'] = Rho_data[exp]['Rhos'][idxs]
+
+    data[data_name] = Rho_data
+
+with open('extracted.pkl', 'wb') as f:
+    pkl.dump((data, Bs), f)
