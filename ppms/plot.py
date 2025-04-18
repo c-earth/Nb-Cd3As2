@@ -9,7 +9,7 @@ mpl.rcParams['text.usetex'] = True
 mpl.rcParams['font.family'] = 'cm'
 mpl.rcParams['font.size'] = '9'
 
-colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 380))
+colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
 cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
 
 width_pt = 246
@@ -28,63 +28,67 @@ fig_size, ax_size = plot_arg((1.78, 0.05), width_in, (0.03, 0.02), (1, 1), (1, 1
 fig = plt.figure(figsize = fig_size)
 ax = fig.add_axes(ax_size)
 ax.axis('off')
-cb = fig.colorbar(plt.cm.ScalarMappable(cmap = cmap, norm = plt.Normalize(vmin = -30, vmax = 350)), orientation = 'horizontal', cax = ax.inset_axes([0, 0, 1, 1]))
+cb = fig.colorbar(plt.cm.ScalarMappable(cmap = cmap, norm = plt.Normalize(vmin = 0, vmax = 25)), orientation = 'horizontal', cax = ax.inset_axes([0, 0, 1, 1]))
 cb.ax.set_xlabel(r'$T$ [K]')
-cb.ax.set_xlim(0, 300)
-fig.savefig(f'Rho_colorbar.pdf', dpi = 300)
+cb.ax.set_xlim(0, 25)
+fig.savefig(f'colorbar.pdf', dpi = 100)
 
-fig_size, ax_size = plot_arg((0.05, 1.8), width_in, (0.07, 0.02), (0, 0), (0, 0), (0.05, 0.05), (0.08, 0.05))
-fig = plt.figure(figsize = fig_size)
-ax = fig.add_axes(ax_size)
-ax.axis('off')
-cb = fig.colorbar(plt.cm.ScalarMappable(cmap = cmap, norm = plt.Normalize(vmin = -30, vmax = 350)), orientation = 'vertical', cax = ax.inset_axes([0, 0, 1, 1]))
-cb.ax.set_ylabel(r'$T$ [K]')
-cb.ax.set_ylim(0, 300)
-fig.savefig(f'MR_colorbar.pdf', dpi = 300)
+def smooth(seq, window):
+    out = []
+    for i in range(len(seq)):
+        out.append(np.mean(seq[max(0, int(i-window/2)): min(len(seq)-1, int(i+window/2))]))
+    return np.array(out)
 
+window = 10
 for data_name in data:
     for exp, exp_data in data[data_name].items():
-        fig_size, ax_size = plot_arg((0.5, 0.5), width_in, (0.03, 0.04), (exp == 'Para', data_name == 'bulk'), (1, data_name == 'bulk'), (0.05, 0.05), (0.08, 0.05))
+        fig_size, ax_size = plot_arg((0.5, 0.5), width_in, (0.03, 0.04), (data_name == 'pris', exp == 'Hall'), (1, exp == 'Hall'), (0.05, 0.05), (0.08, 0.05))
         fig = plt.figure(figsize = fig_size)
         ax = fig.add_axes(ax_size)
         
         for T, Rho in zip(np.flip(exp_data['Ts'], axis = 0), np.flip(exp_data['Rhos'], axis = 0)):
-            ax.plot(Bs, Rho * 1E6, '-', color = colors[int(T)+30])
+            if T > 25:
+                continue
+            ax.plot(Bs, smooth(Rho, window) * 1E6, '-', color = colors[int(T)])
         ax.set_xlim(0, 9)
         
-        
-        if data_name != 'bulk':
+        if exp != 'Hall':
             ax.set_xticklabels([])
         else:
             ax.set_xlabel('$B$ [T]')
 
-        if exp == 'Para':
+        if data_name == 'pris':
             ax.set_ylabel('$\\rho$ [$\mu\Omega\cdot$m]')
             ax.yaxis.set_label_coords(-ax_size[0], 0.5)
 
-        fig.savefig(f'Rho_{exp}_{data_name}.pdf', dpi = 300)
+        fig.savefig(f'Rho_{exp}_{data_name}.pdf', dpi = 100)
 
         if exp == 'Hall':
             continue
 
         MRs = (exp_data['Rhos'] / exp_data['Rhos'][:, :1] - 1) * 100
 
+        fig_size, ax_size = plot_arg((0.5, 0.5), width_in, (0.03, 0.04), (data_name == 'pris', exp == 'Perp'), (1, exp == 'Perp'), (0.05, 0.05), (0.08, 0.05))
+        
         fig = plt.figure(figsize = fig_size)
         ax = fig.add_axes(ax_size)
         
         for T, MR in zip(np.flip(exp_data['Ts'], axis = 0), np.flip(MRs, axis = 0)):
-            ax.plot(Bs, MR, '-', color = colors[int(T)+30])
+            if T > 25:
+                continue
+            ax.plot(Bs, smooth(MR, window), '-', color = colors[int(T)])
+
         ax.set_xlim(0, 9)
-        if data_name != 'bulk':
+        if exp != 'Perp':
             ax.set_xticklabels([])
         else:
             ax.set_xlabel('$B$ [T]')
 
-        if exp == 'Para':
+        if data_name == 'pris':
             ax.set_ylabel('MR [\%]')
             ax.yaxis.set_label_coords(-ax_size[0], 0.5)
 
-        fig.savefig(f'MR_{exp}_{data_name}.pdf', dpi = 300)
+        fig.savefig(f'MR_{exp}_{data_name}.pdf', dpi = 100)
 
 
 
