@@ -3,14 +3,17 @@ import pickle as pkl
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from color_conf import colors_custom, cmap_custom, colors3, cmap3, colors5, cmap5
 
 
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams['font.family'] = 'cm'
 mpl.rcParams['font.size'] = '9'
 
-colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
-cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
+# colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
+# cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
+colors = colors5    # colors_custom
+cmap = cmap5    #cmap_custom
 
 width_pt = 246
 width_in = width_pt/72.27
