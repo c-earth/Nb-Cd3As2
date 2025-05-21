@@ -1,9 +1,10 @@
 import pickle as pkl
+import cmcrameri.cm as cmc
 
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from color_conf import colors_custom, cmap_custom, colors3, cmap3, colors5, cmap5
+from color_conf import colors_custom, cmap_custom, colors3, cmap3, colors5, cmap5, colors_gy, cmap_gy
 
 
 mpl.rcParams['text.usetex'] = True
@@ -12,8 +13,13 @@ mpl.rcParams['font.size'] = '9'
 
 # colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
 # cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
-colors = colors5    # colors_custom
-cmap = cmap5    #cmap_custom
+# colors = colors_gy    # colors_custom
+# cmap = cmap_gy    #cmap_custom
+
+# Use batlow colormap
+# colors = mpl.colormaps['batlow'](np.linspace(0, 1, 26))
+colors = cmc.batlow(np.linspace(0, 1, 26))
+cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_batlow', colors)
 
 width_pt = 246
 width_in = width_pt/72.27

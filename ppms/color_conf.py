@@ -155,8 +155,19 @@ cmap5 = multi_color_cmap(
     N=256
 )
 
+cmap_gy = multi_color_cmap(
+    colors=["#117733", "#88CCEE",    #blend_hex("#AA3377", "#EE6677", -0.9),  
+            "#DDCC77"],  # yellow‑green     (0.7)
+    positions=[0.0, 0.4, 1.0],  # you decide where colours 2 & 3 sit
+    name="green_yellow",
+    N=256
+)
+
+
 # 26 equally spaced colours for line plots
 colors5 = cmap5(np.linspace(0, 1, 26))
+
+colors_gy = cmap_gy(np.linspace(0, 1, 26))
 
 
 if __name__ == "__main__":
