@@ -3,17 +3,25 @@ import pickle as pkl
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import cmcrameri.cm as cmc
 
 
 mpl.rcParams['text.usetex'] = True
 mpl.rcParams['font.family'] = 'cm'
 mpl.rcParams['font.size'] = '9'
 
-colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
-cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
+# colors = mpl.colormaps['gnuplot'](np.linspace(0, 1, 26))
+# cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_gnuplot', colors)
+
+colors = cmc.batlow(np.linspace(0, 1, 26))
+cmap = mpl.colors.LinearSegmentedColormap.from_list('custom_batlow', colors)
 
 width_pt = 246
 width_in = width_pt/72.27
+
+facecolors = {'pris': {'Para': '#CCB098', 'Perp': '#D7C0AD', 'Hall': '#EBDFD5'}, 
+              'surf': {'Para': '#B2DEF4', 'Perp': '#D0EBF8', 'Hall': '#E8F5FC'}, 
+              'bulk': {'Para': '#D98B98', 'Perp': '#E2A8B2', 'Hall': '#F0D0D5'}}
 
 def plot_arg(axis_size, width_in, axis_margin, have_label, have_tick_label, label_size, tick_label_size):
     fig_size = [(axis_size[i] + (2 + have_label[i] * (1 - have_tick_label[i])) * axis_margin[i] + label_size[i] * have_label[i] + tick_label_size[i] * have_tick_label[i]) * width_in for i in range(2)]
@@ -71,6 +79,7 @@ for data_name in data:
         fig_size, ax_size = plot_arg((0.5, 0.5), width_in, (0.03, 0.04), (data_name == 'pris', exp == 'Perp'), (1, exp == 'Perp'), (0.05, 0.05), (0.08, 0.05))
         
         fig = plt.figure(figsize = fig_size)
+        fig.patch.set_facecolor(facecolors[data_name][exp])
         ax = fig.add_axes(ax_size)
         
         for T, MR in zip(np.flip(exp_data['Ts'], axis = 0), np.flip(MRs, axis = 0)):
@@ -89,6 +98,3 @@ for data_name in data:
             ax.yaxis.set_label_coords(-ax_size[0], 0.5)
 
         fig.savefig(f'MR_{exp}_{data_name}.pdf', dpi = 100)
-
-
-
